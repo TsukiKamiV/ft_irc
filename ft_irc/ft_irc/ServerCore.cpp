@@ -15,23 +15,23 @@ _fds() {}
 Server::~Server() {}
 
 /**
- Server::run()
- └── Server::handlePollEvents()
- ├── 监听 fd 有事件
- │   └── Server::acceptNewClient()
- │
- └── client fd 有事件
- └── Server::handleClientEvent(index)
- ├── 检查 HUP / ERR / NVAL
- ├── recv(...)
- ├── bytesRead == 0 -> removeClient()
- ├── bytesRead == -1 -> 错误处理
- └── Server::handleClientBuffer(clientIndex, chunk)
- ├── Client::appendBuffer(chunk)
- ├── 在 Client::_buffer 中找 '\n'
- ├── 切出完整 line
- ├── 去掉行尾 '\r'
- └── 暂时打印 line
+ * Server::run()
+ * └── Server::handlePollEvents()
+ *     ├── Monitor file descriptors for incoming events
+ *     │   └── Server::acceptNewClient()
+ *     │
+ *     └── Client socket has activity
+ *         └── Server::handleClientEvent(index)
+ *             ├── Check POLLHUP / POLLERR / POLLNVAL
+ *             ├── recv(...)
+ *             ├── bytesRead == 0 -> removeClient()
+ *             ├── bytesRead == -1 -> handle recv error
+ *             └── Server::handleClientBuffer(clientIndex, chunk)
+ *                 ├── Client::appendBuffer(chunk)
+ *                 ├── Search for '\n' inside Client::_buffer
+ *                 ├── Extract complete IRC lines
+ *                 ├── Remove trailing '\r'
+ *                 └── Process the parsed line
  */
 
 static void	sigintHandler(int signum);
@@ -58,52 +58,51 @@ void	Server::initServer() {
 }
 
 /**
- * @brief 创建并初始化服务器监听 socket。
+ * @brief Create and initialize the server listening socket.
  *
- * 该函数负责完成以下步骤：
- * 1. 创建 IPv4 / TCP 监听 socket；
- * 2. 设置地址复用选项 `SO_REUSEADDR`；
- * 3. 将 socket 设为 non-blocking；
- * 4. 绑定到指定端口；
- * 5. 开始监听传入连接。
+ * This function performs the basic setup required for the server socket:
+ * 1. Create an IPv4 / TCP socket;
+ * 2. Enable address reuse with `SO_REUSEADDR`;
+ * 3. Set the socket to non-blocking mode;
+ * 4. Bind the socket to the given port;
+ * 5. Start listening for incoming client connections.
  *
- * @param port 服务器监听端口，取值应在 1 ~ 65535 之间。
- * @return 成功时返回监听 socket 的 fd；失败时返回 -1。
+ * @param port The port number used by the server, expected to be between
+ *             1 and 65535.
+ * @return The listening socket fd on success, or -1 on failure.
  */
 
+/**
+	 * Socket setup overview:
+	 *
+	 * 1. Create an IPv4 TCP listening socket with socket(AF_INET,
+	 *    SOCK_STREAM, 0).
+	 *
+	 * 2. Enable SO_REUSEADDR so the server can quickly reuse the same
+	 *    address and port after restarting.
+	 *
+	 * 3. Set the socket to non-blocking mode to avoid blocking poll().
+	 *
+	 * 4. Configure sockaddr_in:
+	 *    - AF_INET      -> IPv4 address family
+	 *    - INADDR_ANY   -> listen on all available network interfaces
+	 *    - htons(port)  -> convert port to network byte order
+	 *
+	 * 5. Bind the socket to the configured address and port.
+	 *
+	 * 6. Start listening for incoming connections.
+	 *    The backlog value defines the maximum number of pending
+	 *    connections waiting to be accepted.
+	 */
 
 int Server::createListeningSocket(long port) {
 	int	serverFd;
-	//opt -- option，一个用来设置选项值的变量
 	int	opt;
 	struct sockaddr_in addr;
-	//这个结构体内部大概是这样：
-	//struct sockaddr_in {
-	//	short sin_family;
-	//	unsigned short sin_port;
-	//	struct in_addr sin_addr;
-	//	char sin_zero[8];  // padding
-	//};
-	
-	//创建监听socket, fd是这个socket的fd
-	/**
-	 * @param domain, type, protocol
-	 *AF_INET（使用什么地址族） ： IPV4
-	 *	创建一个基于IPv4的socket
-	 *SOCK_STREAM：面向连接的字节流通信，通常对应的协议是TCP协议
-	 *0: 协议号 - 让操作系统根据前两个参数自动选择默认协议
-	 *整句意思：创建一个基于 IPv4、使用 TCP 字节流通信的 socket，并把它的 fd 返回给 serverFd
-	 */
+
 	serverFd = socket(AF_INET, SOCK_STREAM, 0);
 	if (serverFd == -1)
 		return -1;
-	/**
-	 *@brief 给 serverFd 这个 socket 设置一个选项：开启 `SO_REUSEADDR` ——也就是允许地址快速复用
-	 *function prototype: `setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))`
-	 *@param 1. serverfd => 表示对哪个socket设置选项，改变配置
-	 *		  2. SOL_	SOCKET => level参数，有SOL_SOCKET(socket通用层）、IPPROTO_TCP（TCP层）、IPPROTO_IP（IP层）
-	 *		  3. SO_REUSEADDR => 选项名，表示“允许重用本地地址”。
-	 */
 	opt = 1;
 	if (setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
 		close(serverFd);
@@ -121,7 +120,6 @@ int Server::createListeningSocket(long port) {
 		close(serverFd);
 		return -1;
 	}
-	//listen => 10 => backlog (当服务器socket已经在监听的时候，内核为“等待被accept的新连接“准备的排队上限）或“等待接受的连接队列长度”
 	if (listen(serverFd, MAX_CONNECTION) == -1) {
 		close(serverFd);
 		return -1;
@@ -129,18 +127,19 @@ int Server::createListeningSocket(long port) {
 	return serverFd;
 }
 
-//先把 fd 当前的“配置”读出来 → 在原有配置上加一个 NONBLOCK → 再写回去
+/**
+ * @brief Set a socket fd to non-blocking mode.
+ *
+ * In non-blocking mode, socket operations such as accept(), recv(),
+ * and send() return immediately instead of waiting until they can be
+ * completed. If the operation would block, the call fails with errno set
+ * to EAGAIN or EWOULDBLOCK, allowing the server to keep running and let
+ * poll() decide when the fd should be handled again.
+ */
 int	Server::setNonBlocking(int fd) {
-	//int flags;
 	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
 		return -1;
 	return 0;
-	//flags = fcntl(fd, F_GETFL, 0);
-	//if (flags == -1)
-	//	return -1;
-	//if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
-	//	return -1;
-	//return 0;
 }
 
 static void	sigintHandler(int signum) {
@@ -154,6 +153,23 @@ void	Server::run() {
 	}
 }
 
+/**
+ * @brief Poll all managed sockets and dispatch ready events.
+ *
+ * This function is the main event loop step of the server. It waits for
+ * activity on the listening socket and all connected client sockets.
+ * When the listening socket becomes readable, a new client is accepted.
+ * When a client socket has events, the event is delegated to
+ * handleClientEvent().
+ *
+ * The function uses the index mapping between _fds and _clients:
+ * _fds[0] is always the server listening socket, while _fds[i]
+ * corresponds to _clients[i - 1] for connected clients.
+ *
+ * If handleClientEvent() removes a client, this function does not
+ * increment the index, because the next pollfd entry has shifted into
+ * the current position.
+ */
 void	Server::handlePollEvents() {
 	int 	pollRet;
 	size_t	i;
@@ -190,10 +206,13 @@ void	Server::handlePollEvents() {
 	}
 }
 
-
 /**
- *Now the pollfd is clientfd + 1 (the pollfd[0] is the server listening socket
- *For the concern of potential complication, it might be useful to have a mapping function "findPollIndexByFd(clientFd)"
+ * @brief Accept a new client connection and add it to server management.
+ *
+ * This function accepts one pending connection from the listening socket,
+ * sets the new client socket to non-blocking mode, creates the matching
+ * pollfd entry, stores the client information, and records the host field
+ * used later in IRC message prefixes.
  */
 void	Server::acceptNewClient() {
 	int					clientFd;
@@ -227,6 +246,21 @@ void	Server::acceptNewClient() {
 	std::cout << "[OK] client fd " << clientFd << " added to server management." << std::endl;
 }
 
+/**
+ * @brief Close and remove a client from all server-managed structures.
+ *
+ * The given index refers to the client's position inside _fds, not inside
+ * _clients. Because _fds[0] is reserved for the server listening socket,
+ * the matching client index is calculated as index - 1.
+ *
+ * This function closes the client socket fd, removes the client from all
+ * joined channels, broadcasts the quit reason to related channel members,
+ * erases the Client object from _clients, and erases the matching pollfd
+ * entry from _fds.
+ *
+ * @param index The pollfd index of the client to remove.
+ * @param reason The quit or disconnect reason used for channel broadcast.
+ */
 void	Server::removeClient(size_t index, const std::string &reason) {
 	size_t	clientIndex;
 	int		fd;
@@ -248,6 +282,23 @@ void	Server::removeClient(size_t index, const std::string &reason) {
 	std::cout << "[OK] client fd " << fd << " removed from server management." << std::endl;
 }
 
+/**
+ * @brief Handle one poll event triggered by a client socket.
+ *
+ * This function checks socket error events first, then tries to flush
+ * pending output data when POLLOUT is set. When POLLIN is set, it reads
+ * available client data with recv() and forwards the received chunk to
+ * the IRC line buffer parser.
+ *
+ * On a non-blocking socket, recv() may return -1 with EAGAIN or
+ * EWOULDBLOCK. Both mean that the operation would block because no data
+ * is currently available, so this is not treated as a fatal error.
+ * EINTR means the system call was interrupted by a signal and can also
+ * be safely ignored here.
+ *
+ * @param index The index of the client socket inside _fds.
+ * @return true if the client was removed, false otherwise.
+ */
 bool	Server::handleClientEvent(size_t index) {
 	char	buffer[513];
 	int		bytesRead;
@@ -281,11 +332,9 @@ bool	Server::handleClientEvent(size_t index) {
 	if (bytesRead == -1) {
 		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
 			return false;
-		throw std::runtime_error(std::string("Error: recv failed: ")
-								 + std::strerror(errno));
+		throw std::runtime_error(std::string("Error: recv failed: ") + std::strerror(errno));
 	}
 	buffer[bytesRead] = '\0';
 	handleClientBuffer(clientIndex, std::string(buffer, bytesRead));
 	return false;
 }
-

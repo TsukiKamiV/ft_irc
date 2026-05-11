@@ -2,6 +2,33 @@
 #include "Channel.hpp"
 #include "Client.hpp"
 
+/**
+ * @brief Server I/O helpers for buffered IRC input and non-blocking output.
+ *
+ * This file contains the functions that connect poll()-based socket events
+ * with the IRC command layer.
+ *
+ * Input side:
+ * - handleClientBuffer() appends each recv() chunk to the client's private
+ *   input buffer.
+ * - Since TCP is a byte stream, one recv() call may contain a partial IRC
+ *   command, one full command, or several commands at once.
+ * - The buffer is therefore split only when a complete IRC line ending with
+ *   '\n' is found.
+ * - A trailing '\r' is removed before the line is parsed and dispatched.
+ *
+ * Output side:
+ * - sendToClient() does not assume that send() can write the whole message
+ *   immediately.
+ * - handleSendBuffer() appends outgoing data to the client's send buffer and
+ *   tries to flush it with send() on the non-blocking socket.
+ * - If only part of the data is sent, the remaining bytes stay in the buffer.
+ * - updateClientPollEvent() enables POLLOUT only while there is pending data
+ *   to send, otherwise the socket only listens for POLLIN.
+ *
+ * Broadcast helpers reuse sendToClient(), so channel messages, nick changes,
+ * and server replies all follow the same buffered non-blocking send path.
+ */
 
 void	Server::handleClientBuffer(size_t clientIndex, const std::string &chunk) {
 	std::string &clientBuffer = _clients[clientIndex].getBuffer();
@@ -76,7 +103,6 @@ void	Server::processLine(size_t clientIndex, const std::string &line) {
 	msg = parseLine(line);
 	if (msg.command.empty())
 		return ;
-	//std::cout << "Input message command: " << msg.command << ", params: " << msg.params[0] << std::endl;
 	if (msg.command == "PASS")
 		handlePass(clientIndex, msg);
 	else if (msg.command == "NICK")
@@ -142,20 +168,7 @@ parseMessage	Server::parseLine(const std::string &line) {
 	return msg;
 }
 
-/**
- *@func : send(fd, message.c_str(), message.size(), 0);
- *❗️❗️To be improuved for non-blocking partial chunck sending/ EAGAIN / EWOULDBLOCK / Buffer zone sending
- */
 void	Server::sendToClient(size_t clientIndex, const std::string &message) {
-	//if (clientIndex >= _clients.size())
-	//	return ;
-	//ssize_t	sentBytes;
-	//int		fd = _clients[clientIndex].getFd();
-	//sentBytes = send(fd, message.c_str(), message.size(), 0);
-	//if (sentBytes == -1)
-	//	std::cerr << "[SEND] failed to fd " << fd << ": " << std::strerror(errno) << //std::endl;
-	//size_t	pollIndex;
-	
 	if (clientIndex >= _clients.size())
 		return ;
 	if (message.empty())
