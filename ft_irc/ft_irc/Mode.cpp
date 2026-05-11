@@ -92,14 +92,8 @@ void	Server::handleMode(size_t clientIndex, const parseMessage &msg) {
 	}
 	else if (modeString == "+k" || modeString == "-k") {
 		std::string key = "";
-		if (modeString == "+k") {
-			//if (msg.params.size() < 3) {
-			//	std::cout << "[MODE] channel key needed" << std::endl;
-			//	sendToClient(clientIndex, Replies::ERR_NEEDMOREPARAMS("localhost", getReplyTarget(clientIndex), msg.command));
-			//	return ;
-			//}
+		if (modeString == "+k")
 			key = msg.params[2];
-		}
 		keyManager(clientIndex, modeString, key, channelIndex);
 	}
 	else if (modeString == "+l" || modeString == "-l") {
@@ -108,11 +102,6 @@ void	Server::handleMode(size_t clientIndex, const parseMessage &msg) {
 		
 		maxNumber = 0;
 		if (modeString == "+l") {
-			//if (msg.params.size() < 3) {
-			//	std::cout << "[MODE] limit number needed" << std::endl;
-			//	sendToClient(clientIndex, Replies::ERR_NEEDMOREPARAMS("localhost", getReplyTarget(clientIndex), msg.command));
-			//	return ;
-			//}
 			errno = 0;
 			end = NULL;
 			maxNumber = std::strtol(msg.params[2].c_str(), &end, 10);
@@ -163,11 +152,8 @@ void	Server::operatorManager(size_t clientIndex, const std::string &modeString, 
 		int res = _channels[channelIndex].removeOperator(targetFd);
 		if (res == Channel::OPERATOR_NOT_FOUND)
 			return ;
-			//sendToClient(clientIndex, "[MODE] target is not channel operator\r\n");
 		else if (res == Channel::OPERATOR_REMOVED)
 			channelBroadcast(channelIndex, Replies::RPL_MODE(_clients[clientIndex].getPrefix(), channelName, "-o", targetNick));
-		//else if (res == Channel::OPERATOR_LESS_THAN_ONE)
-		//	sendToClient(clientIndex, "[MODE] cannot remove last //operator\r\n");
 	}
 }
 
@@ -181,25 +167,20 @@ void	Server::inviteOnlyManager(size_t clientIndex, const std::string &modeString
 	}
 	if (modeString == "+i") {
 		if (_channels[channelIndex].isInviteOnly()) {
-			//sendToClient(clientIndex, "[MODE] channel already invite only\r\n");
 			return ;
 		}
 		_channels[channelIndex].setInviteOnly(true);
 		std::cout << "[MODE] invite-only enabled" << std::endl;
 		channelBroadcast(channelIndex,
 						 Replies::RPL_MODE(_clients[clientIndex].getPrefix(), channelName, "+i", ""));
-		//sendToClient(clientIndex, "[MODE] invite-only enabled\r\n");
-		//channelBroadcast(channelIndex, "[MODE] " + channelName + " channel invite-only //enabled by " + _clients[clientIndex].getNick() + "\r\n");
 	}
 	else if (modeString == "-i") {
 		if (!_channels[channelIndex].isInviteOnly()) {
-			//sendToClient(clientIndex, "[MODE] channel already open\r\n");
 			return ;
 		}
 		_channels[channelIndex].setInviteOnly(false);
 		std::cout << "[MODE] invite-only disabled on " << channelName << std::endl;
-		channelBroadcast(channelIndex,
-						 Replies::RPL_MODE(_clients[clientIndex].getPrefix(), channelName, "-i", ""));
+		channelBroadcast(channelIndex, Replies::RPL_MODE(_clients[clientIndex].getPrefix(), channelName, "-i", ""));
 	}
 }
 
@@ -213,7 +194,6 @@ void	Server::topicManager(size_t clientIndex, const std::string &modeString, int
 	}
 	if (modeString == "+t") {
 		if (_channels[channelIndex].isTopicRestricted()) {
-			//sendToClient(clientIndex, "[MODE] channel topic already restricted\r\n");
 			return ;
 		}
 		_channels[channelIndex].setTopicRestricted(true);
@@ -222,7 +202,6 @@ void	Server::topicManager(size_t clientIndex, const std::string &modeString, int
 	}
 	else if (modeString == "-t") {
 		if (!_channels[channelIndex].isTopicRestricted()) {
-			//sendToClient(clientIndex, "[MODE] channel topic already open\r\n");
 			return ;
 		}
 		_channels[channelIndex].setTopicRestricted(false);
@@ -234,7 +213,6 @@ void	Server::topicManager(size_t clientIndex, const std::string &modeString, int
 void	Server::keyManager(size_t clientIndex, const std::string &modeString, const std::string &key, int channelIndex) {
 	int	clientFd = _clients[clientIndex].getFd();
 	std::string channelName = _channels[channelIndex].getName();
-	//std::string nick = _clients[clientIndex].getNick();
 	if (!_channels[channelIndex].hasOperator(clientFd)) {
 		std::cout << "[MODE] caller is not channel operator" << std::endl;
 		sendToClient(clientIndex, Replies::ERR_CHANOPRIVSNEEDED("localhost", getReplyTarget(clientIndex), channelName));
@@ -257,7 +235,6 @@ void	Server::keyManager(size_t clientIndex, const std::string &modeString, const
 	}
 	else if (modeString == "-k") {
 		if (!_channels[channelIndex].isKeyNeeded()) {
-			//sendToClient(clientIndex, "[MODE] channel key is not set\r\n");
 			return ;
 		}
 		_channels[channelIndex].removeKey();
@@ -269,7 +246,6 @@ void	Server::keyManager(size_t clientIndex, const std::string &modeString, const
 void	Server::maxMemberManager(size_t clientIndex, const std::string &modeString, int maxNumber, int channelIndex) {
 	int clientFd = _clients[clientIndex].getFd();
 	std::string channelName = _channels[channelIndex].getName();
-	//std::string nick = _clients[clientIndex].getNick();
 	if (!_channels[channelIndex].hasOperator(clientFd)) {
 		std::cout << "[MODE] caller is not channel operator" << std::endl;
 		sendToClient(clientIndex, Replies::ERR_CHANOPRIVSNEEDED("localhost", getReplyTarget(clientIndex), channelName));
@@ -287,7 +263,6 @@ void	Server::maxMemberManager(size_t clientIndex, const std::string &modeString,
 	}
 	else if (modeString == "-l") {
 		if (!_channels[channelIndex].isNumLimited()) {
-			//sendToClient(clientIndex, "[MODE] channel member limit is not set\r\n");
 			return ;
 		}
 		_channels[channelIndex].removeMaxMemberNum();

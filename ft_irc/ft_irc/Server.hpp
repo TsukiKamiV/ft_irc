@@ -30,24 +30,10 @@ struct parseMessage {
 	
 	parseMessage(): command(), params(), hasTrailingParam(false) {}
 };
-/**
- *@brief 总控服务器
- *通常负责：
- **保存端口和密码
- **创建监听socket
- **初始化non-blocking
- **管理POLL
- **接受新连接
- **保存所有在线客户端
- **保存所有频道
- **主事件循环
- **分发命令
- **清理断线用户
- */
+
 class Server {
 public:
 	Server(long port, const std::string &password);
-	//服务器作为总控类，通常不应该被复制
 	~Server();
 	
 	//ServerCore.cpp

@@ -60,7 +60,6 @@ void	Server::handleNick(size_t clientIndex, const parseMessage &msg) {
 	oldNick = _clients[clientIndex].getNick();
 	clientFd = _clients[clientIndex].getFd();
 	if (oldNick == newNick) {
-		//sendToClient(clientIndex, "[NICK] nickname unchanged\r\n");
 		return ;
 	}
 	_clients[clientIndex].setNick(newNick);

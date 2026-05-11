@@ -15,11 +15,6 @@ void	Server::handleJoin(size_t clientIndex, const parseMessage &msg) {
 		sendToClient(clientIndex, Replies::ERR_NEEDMOREPARAMS("localhost", getReplyTarget(clientIndex), "JOIN"));
 		return ;
 	}
-	//if (msg.params.size() > 2) {
-	//	std::cout << "[JOIN] invalid join format" << std::endl;
-	//	sendToClient(clientIndex, "[JOIN] invalid format\r\n");
-	//	return ;
-	//}
 	std::string channelName = msg.params[0];
 	if (channelName.empty() || channelName.size() < 2) {
 		std::cout << "[JOIN] invalid channel name" << std::endl;
@@ -42,7 +37,6 @@ void	Server::handleJoin(size_t clientIndex, const parseMessage &msg) {
 		std::cout << "[JOIN] channel name found" << std::endl;
 		if (_channels[channelIndex].hasMember(_clients[clientIndex].getFd())) {
 			std::cout << "[JOIN] client already in channel" << std::endl;
-			//sendToClient(clientIndex, "[JOIN] already in channel\r\n");
 			return ;
 		}
 		if (_channels[channelIndex].isInviteOnly()) {
