@@ -94,9 +94,9 @@
             filePath = "ft_irc/ServerCore.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "198"
-            endingLineNumber = "198"
-            landmarkName = "Server::acceptNewClient()"
+            startingLineNumber = "200"
+            endingLineNumber = "200"
+            landmarkName = "Server::handlePollEvents()"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -158,8 +158,8 @@
             filePath = "ft_irc/ServerCore.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "180"
-            endingLineNumber = "180"
+            startingLineNumber = "182"
+            endingLineNumber = "182"
             landmarkName = "Server::handlePollEvents()"
             landmarkType = "7">
          </BreakpointContent>

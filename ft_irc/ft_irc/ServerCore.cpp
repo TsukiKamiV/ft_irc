@@ -2,7 +2,8 @@
 #include "Channel.hpp"
 #include "Client.hpp"
 
-static bool	g_running = true;
+//static bool	g_running = true;
+static volatile sig_atomic_t g_running = 1;
 bool	Server::_signal = false;
 
 Server::Server(long port, const std::string &password)
@@ -13,8 +14,10 @@ _clients(),
 _channels(),
 _fds() {}
 Server::~Server() {
-	for (std::size_t i = 0; i < _fds.size(); ++i)
-		close(_fds[i]);
+	for (std::size_t i = 0; i < _fds.size(); ++i) {
+		if (_fds[i].fd >= 0)
+			close(_fds[i].fd);
+	}
 	_fds.clear();
 }
 
@@ -38,12 +41,14 @@ Server::~Server() {
  *                 └── Process the parsed line
  */
 
-static void	sigintHandler(int signum);
+static void	signalHandler(int signum);
 
 void	Server::initServer() {
 	struct pollfd 	serverPoll;
 	
-	std::signal(SIGINT, sigintHandler);
+	std::signal(SIGINT, signalHandler);
+	std::signal(SIGTERM, signalHandler);
+	//ignore the case when trying to write into a disconnected socket
 	std::signal(SIGPIPE, SIG_IGN);
 	
 	_serverSocketFd = Server::createListeningSocket(this->_port);
@@ -146,13 +151,13 @@ int	Server::setNonBlocking(int fd) {
 	return 0;
 }
 
-static void	sigintHandler(int signum) {
+static void	signalHandler(int signum) {
 	(void)signum;
-	g_running = false;
+	g_running = 0;
 }
 
 void	Server::run() {
-	while (g_running) {
+	while (g_running != 0) {
 		handlePollEvents();
 	}
 }
