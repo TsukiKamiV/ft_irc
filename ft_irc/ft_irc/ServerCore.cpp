@@ -12,7 +12,11 @@ _serverSocketFd(-1),
 _clients(),
 _channels(),
 _fds() {}
-Server::~Server() {}
+Server::~Server() {
+	for (std::size_t i = 0; i < _fds.size(); ++i)
+		close(_fds[i]);
+	_fds.clear();
+}
 
 /**
  * Server::run()

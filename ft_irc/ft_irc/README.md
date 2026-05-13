@@ -93,6 +93,24 @@ The project subject explicitly mentions testing fragmented input. With `nc -C`, 
 
 This simulates a command arriving in multiple packets and helps verify that the server correctly rebuilds a full command from partial received data before parsing it.
 
+#### Client suspend test (Ctrl + Z)
+
+Create a client A, join a channel, type `ctrl + z` to suspend the nc process;
+Then create client B with the following command:
+
+```text
+(
+echo "PASS pass"
+echo "NICK bbb"
+echo "USER bbb bbb localhost :bbb"
+echo "JOIN #1"
+while true; do echo "PRIVMSG #1 :hello hello hello hello hello"; done
+) | nc 127.0.0.1 6667
+```
+Then use `fg` for client A to continue the session.
+The client A should be able to receive all the messages flushed by the send buffer.
+
+
 ### Using the Provided Test Client
 
 In addition to `nc`, this project also includes a minimal custom test client designed to validate behaviors that are harder to observe manually, especially non-blocking output handling, long message delivery, and slow-client scenarios.

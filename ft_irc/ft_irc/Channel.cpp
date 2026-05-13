@@ -65,10 +65,12 @@ void	Channel::addMember(int clientFd) {
 
 void	Channel::removeMember(int clientFd) {
 	for(size_t i = 0; i < _memberFds.size(); ++i) {
-		if (_memberFds[i] == clientFd)
+		if (_memberFds[i] == clientFd) {
 			_memberFds.erase(_memberFds.begin() + i);
-		if (hasOperator(clientFd))
-			removeOperator(clientFd);
+			if (hasOperator(clientFd))
+				removeOperator(clientFd);
+			break;
+		}
 	}
 }
 
