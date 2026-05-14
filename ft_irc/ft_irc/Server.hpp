@@ -81,7 +81,7 @@ private:
 	std::string	buildNameReplyList(int channelIndex) const;
 	
 	//ServerIO.cpp
-	void	handleClientBuffer(size_t index, const std::string &chunk);
+	bool	handleClientBuffer(size_t index, const std::string &chunk);
 	void	handleSendBuffer(size_t index, const std::string &chunk);
 	void	updateClientPollEvent(size_t clientIndex);
 	void	processLine(size_t clientIndex, const std::string &line);

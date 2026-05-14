@@ -30,25 +30,49 @@
  * and server replies all follow the same buffered non-blocking send path.
  */
 
-void	Server::handleClientBuffer(size_t clientIndex, const std::string &chunk) {
-	std::string &clientBuffer = _clients[clientIndex].getBuffer();
-	size_t		pos;
-	std::string line;
-	int			fd;
-	
-	fd = _clients[clientIndex].getFd();
+//void	Server::handleClientBuffer(size_t clientIndex, const std::string &chunk) {
+//	std::string &clientBuffer = _clients[clientIndex].getBuffer();
+//	size_t		pos;
+//	std::string line;
+//	int			fd;
+//
+//	fd = _clients[clientIndex].getFd();
+//	_clients[clientIndex].appendBuffer(chunk);
+//	while (true) {
+//		pos = clientBuffer.find('\n');
+//		if (pos == std::string::npos)
+//			break;
+//		line = clientBuffer.substr(0, pos);
+//		if (!line.empty() && line[line.size() - 1] == '\r')
+//			line.erase(line.size() - 1);
+//		clientBuffer.erase(0, pos + 1);
+//		processLine(clientIndex, line);
+//		std::cout << "[Buffer fd " << fd << "] " << line << std::endl;
+//	}
+//}
+
+bool	Server::handleClientBuffer(size_t clientIndex, const std::string &chunk) {
+	int	fd = _clients[clientIndex].getFd();
 	_clients[clientIndex].appendBuffer(chunk);
+	
 	while (true) {
-		pos = clientBuffer.find('\n');
+		clientIndex = 0;
+		while (clientIndex < _clients.size() && _clients[clientIndex].getFd() != fd)
+			++clientIndex;
+		if (clientIndex >= _clients.size())
+			return true;
+		std::string	&buf = _clients[clientIndex].getBuffer();
+		size_t		pos = buf.find('\n');
 		if (pos == std::string::npos)
 			break;
-		line = clientBuffer.substr(0, pos);
+		std::string	line = buf.substr(0, pos);
 		if (!line.empty() && line[line.size() - 1] == '\r')
 			line.erase(line.size() - 1);
-		clientBuffer.erase(0, pos + 1);
-		processLine(clientIndex, line);
+		buf.erase(0, pos + 1);
 		std::cout << "[Buffer fd " << fd << "] " << line << std::endl;
+		processLine(clientIndex, line);
 	}
+	return false;
 }
 
 void	Server::handleSendBuffer(size_t index, const std::string &chunk) {

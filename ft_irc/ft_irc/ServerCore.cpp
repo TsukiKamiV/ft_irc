@@ -344,6 +344,6 @@ bool	Server::handleClientEvent(size_t index) {
 		throw std::runtime_error(std::string("Error: recv failed: ") + std::strerror(errno));
 	}
 	buffer[bytesRead] = '\0';
-	handleClientBuffer(clientIndex, std::string(buffer, bytesRead));
-	return false;
+	return (handleClientBuffer(clientIndex, std::string(buffer, bytesRead)));
+	//return false;
 }
