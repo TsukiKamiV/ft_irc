@@ -30,6 +30,10 @@ bool	Server::checkModeParams(size_t clientIndex, const parseMessage &msg) {
 		std::cout << "[MODE] user mode ignored" << std::endl;
 		return false;
 	}
+	if (msg.params.size() == 1) {
+		handleChannelModeQuery(clientIndex, msg.params[0]);
+		return false;
+	}
 	if (msg.params.size() < 2) {
 		std::cout << "[MODE] not enough parameters" << std::endl;
 		sendToClient(clientIndex, Replies::ERR_NEEDMOREPARAMS("localhost", getReplyTarget(clientIndex), msg.command));
@@ -114,6 +118,32 @@ void	Server::handleMode(size_t clientIndex, const parseMessage &msg) {
 		}
 		maxMemberManager(clientIndex, modeString, static_cast<int>(maxNumber), channelIndex);
 	}
+	else if (modeString == "b") {
+		std::cout << "[MODE] ban list query ignored" << std::endl;
+		return ;
+	}
+}
+
+void	Server::handleChannelModeQuery(size_t clientIndex, const std::string &channelName) {
+	int			channelIndex;
+	std::string	modeString;
+	std::string	paramString;
+	
+	channelIndex = findChannelIndex(channelName);
+	if (channelIndex == -1) {
+		sendToClient(clientIndex, Replies::ERR_NOSUCHCHANNEL("localhost", getReplyTarget(clientIndex), channelName));
+		return ;
+	}
+	modeString = "+";
+	if (_channels[channelIndex].isInviteOnly())
+		modeString += "i";
+	if (_channels[channelIndex].isTopicRestricted())
+		modeString += "t";
+	if (_channels[channelIndex].isKeyNeeded())
+		modeString += "k";
+	if (_channels[channelIndex].isNumLimited())
+		modeString += "l";
+	sendToClient(clientIndex, ":localhost 324 " + getReplyTarget(clientIndex) + " " + channelName + " " + modeString + "\r\n");
 }
 
 void	Server::operatorManager(size_t clientIndex, const std::string &modeString, int channelIndex, int targetFd, const std::string &targetNick) {

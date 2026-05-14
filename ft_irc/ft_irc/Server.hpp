@@ -16,6 +16,9 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <cerrno>
+#include <cstring>
+#include <cstdlib>
 
 #include "Client.hpp"
 #include "Channel.hpp"
@@ -101,6 +104,7 @@ private:
 	void	handleQuit(size_t clientIndex, const parseMessage &msg);
 	
 	//Mode.cpp
+	void	handleChannelModeQuery(size_t clientIndex, const std::string &channelName);
 	void	operatorManager(size_t clientIndex, const std::string &modeString, int channelIndex, int targetFd, const std::string &targetNick);
 	void	inviteOnlyManager(size_t clientIndex, const std::string &modeString, int channelIndex);
 	void	topicManager(size_t clientIndex, const std::string &modeString, int channelIndex);
