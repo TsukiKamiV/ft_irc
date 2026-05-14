@@ -289,12 +289,12 @@ inline std::string	RPL_JOIN(const std::string &prefix,
 	return (makeCommandReply(prefix, "JOIN", channel, ""));
 }
 
-//inline std::string	RPL_PART(const std::string &prefix,
-//							 const std::string &channel,
-//							 const std::string &reason)
-//{
-//	return (makeCommandReply(prefix, "PART", channel, reason));
-//}
+inline std::string RPL_PART(const std::string &prefix,
+							const std::string &channel,
+							const std::string &reason)
+{
+	return (makeCommandReply(prefix, "PART", channel, reason));
+}
 
 inline std::string	RPL_PRIVMSG(const std::string &prefix,
 								const std::string &target,

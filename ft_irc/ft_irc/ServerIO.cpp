@@ -30,29 +30,14 @@
  * and server replies all follow the same buffered non-blocking send path.
  */
 
-//void	Server::handleClientBuffer(size_t clientIndex, const std::string &chunk) {
-//	std::string &clientBuffer = _clients[clientIndex].getBuffer();
-//	size_t		pos;
-//	std::string line;
-//	int			fd;
-//
-//	fd = _clients[clientIndex].getFd();
-//	_clients[clientIndex].appendBuffer(chunk);
-//	while (true) {
-//		pos = clientBuffer.find('\n');
-//		if (pos == std::string::npos)
-//			break;
-//		line = clientBuffer.substr(0, pos);
-//		if (!line.empty() && line[line.size() - 1] == '\r')
-//			line.erase(line.size() - 1);
-//		clientBuffer.erase(0, pos + 1);
-//		processLine(clientIndex, line);
-//		std::cout << "[Buffer fd " << fd << "] " << line << std::endl;
-//	}
-//}
-
 bool	Server::handleClientBuffer(size_t clientIndex, const std::string &chunk) {
 	int	fd = _clients[clientIndex].getFd();
+	if (_clients[clientIndex].getBuffer().size() + chunk.size() > 4096) {
+		std::cerr << "[ERROR] fd " << fd << " buffer overflow, disconnecting." << std::endl;
+		size_t	fdsIndex = clientIndex + 1;
+		removeClient(fdsIndex, "Buffer overflow");
+		return true;
+	}
 	_clients[clientIndex].appendBuffer(chunk);
 	
 	while (true) {
@@ -65,7 +50,7 @@ bool	Server::handleClientBuffer(size_t clientIndex, const std::string &chunk) {
 		size_t		pos = buf.find('\n');
 		if (pos == std::string::npos)
 			break;
-		std::string	line = buf.substr(0, pos);
+		std::string line = buf.substr(0, pos);
 		if (!line.empty() && line[line.size() - 1] == '\r')
 			line.erase(line.size() - 1);
 		buf.erase(0, pos + 1);
@@ -155,6 +140,8 @@ void	Server::processLine(size_t clientIndex, const std::string &line) {
 		return ;
 	else if (msg.command == "QUIT")
 		handleQuit(clientIndex, msg);
+	else if (msg.command == "PART")
+		handlePart(clientIndex, msg);
 	else {
 		std::cout << "[INFO] Unknown command: " << msg.command << std::endl;
 		sendToClient(clientIndex, Replies::ERR_UNKNOWNCOMMAND("localhost", getReplyTarget(clientIndex), msg.command));

@@ -363,3 +363,54 @@ void	Server::handleQuit(size_t clientIndex, 	const parseMessage &msg) {
 	fdsIndex = clientIndex + 1;
 	removeClient(fdsIndex, reason);
 }
+
+void	Server::handlePart(size_t clientIndex, const parseMessage &msg) {
+	std::string channelName;
+	std::string reason = "";
+	if (msg.params.size() < 1) {
+		std::cout << "[PART] invalid parameter" << std::endl;
+		sendToClient(clientIndex, Replies::ERR_NEEDMOREPARAMS("localhost", getReplyTarget(clientIndex), "PART"));
+		return ;
+	}
+	channelName = msg.params[0];
+	if (msg.params.size() == 2) {
+		if (msg.hasTrailingParam == false) {
+			std::cout << "[PART] invalid reason format" << std::endl;
+			sendToClient(clientIndex, ":localhost NOTICE " + 	getReplyTarget(clientIndex) + " :Invalid PART format, use: PART 	#channel :reason\r\n");
+			return ;
+		}
+		reason = msg.params[1];
+	}
+	if (channelName.empty()) {
+		std::cout << "[PART] invalid parameter" << std::endl;
+		sendToClient(clientIndex, Replies::ERR_NEEDMOREPARAMS("localhost", getReplyTarget(clientIndex), "PART"));
+		return ;
+	}
+	if (!_clients[clientIndex].isRegistered()) {
+		std::cout << "[PART] client fd " << _clients[clientIndex].getFd() << " is not registered, part refused" << std::endl;
+		sendToClient(clientIndex, Replies::ERR_NOTREGISTERED("localhost", getReplyTarget(clientIndex)));
+		return ;
+	}
+	if (channelName[0] != '#') {
+		std::cout << "[PART] invalid channel name" << std::endl;
+		sendToClient(clientIndex, Replies::ERR_BADCHANMASK("localhost", getReplyTarget(clientIndex), channelName));
+		return ;
+	}
+	int	channelIndex = findChannelIndex(channelName);
+	if (channelIndex == -1) {
+		std::cout << "[PART] channel not found" << std::endl;
+		sendToClient(clientIndex, Replies::ERR_NOSUCHCHANNEL("localhost", getReplyTarget(clientIndex), channelName));
+		return;
+	}
+	int clientFd = _clients[clientIndex].getFd();
+	if (!_channels[channelIndex].hasMember(clientFd)) {
+		std::cout << "[PART] caller is not a member of the channel" << std::endl;
+		sendToClient(clientIndex, Replies::ERR_NOTONCHANNEL("localhost", getReplyTarget(clientIndex), channelName));
+		return ;
+	}
+	//int	channelIndex = findChannelIndex(channelName);
+	channelBroadcast(channelIndex, Replies::RPL_PART(_clients[clientIndex].getPrefix(), channelName, reason));
+	_channels[channelIndex].removeMember(clientFd);
+	if (_channels[channelIndex].isEmpty())
+		removeChannel(channelIndex);
+}

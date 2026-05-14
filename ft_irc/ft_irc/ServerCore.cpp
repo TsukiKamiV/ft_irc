@@ -82,33 +82,33 @@ void	Server::initServer() {
  */
 
 /**
-	 * Socket setup overview:
-	 *
-	 * 1. Create an IPv4 TCP listening socket with socket(AF_INET,
-	 *    SOCK_STREAM, 0).
-	 *
-	 * 2. Enable SO_REUSEADDR so the server can quickly reuse the same
-	 *    address and port after restarting.
-	 *
-	 * 3. Set the socket to non-blocking mode to avoid blocking poll().
-	 *
-	 * 4. Configure sockaddr_in:
-	 *    - AF_INET      -> IPv4 address family
-	 *    - INADDR_ANY   -> listen on all available network interfaces
-	 *    - htons(port)  -> convert port to network byte order
-	 *
-	 * 5. Bind the socket to the configured address and port.
-	 *
-	 * 6. Start listening for incoming connections.
-	 *    The backlog value defines the maximum number of pending
-	 *    connections waiting to be accepted.
-	 */
+ * Socket setup overview:
+ *
+ * 1. Create an IPv4 TCP listening socket with socket(AF_INET,
+ *    SOCK_STREAM, 0).
+ *
+ * 2. Enable SO_REUSEADDR so the server can quickly reuse the same
+ *    address and port after restarting.
+ *
+ * 3. Set the socket to non-blocking mode to avoid blocking poll().
+ *
+ * 4. Configure sockaddr_in:
+ *    - AF_INET      -> IPv4 address family
+ *    - INADDR_ANY   -> listen on all available network interfaces
+ *    - htons(port)  -> convert port to network byte order
+ *
+ * 5. Bind the socket to the configured address and port.
+ *
+ * 6. Start listening for incoming connections.
+ *    The backlog value defines the maximum number of pending
+ *    connections waiting to be accepted.
+ */
 
 int Server::createListeningSocket(long port) {
 	int	serverFd;
 	int	opt;
 	struct sockaddr_in addr;
-
+	
 	serverFd = socket(AF_INET, SOCK_STREAM, 0);
 	if (serverFd == -1)
 		return -1;
@@ -158,7 +158,11 @@ static void	signalHandler(int signum) {
 
 void	Server::run() {
 	while (g_running != 0) {
-		handlePollEvents();
+		try {
+			handlePollEvents();
+		} catch (const std::exception &e) {
+			std::cerr << "[ERROR] " << e.what() << std::endl;
+		}
 	}
 }
 
@@ -184,13 +188,16 @@ void	Server::handlePollEvents() {
 	size_t	i;
 	bool	clientRemoved;
 	
-	if (_fds.empty())
-		throw std::runtime_error("poll list is empty");
+	if (_fds.empty()) {
+		std::cerr << "[ERROR] poll list is empty" << std::endl;
+		return ;
+	}
 	pollRet = poll(&_fds[0], _fds.size(), 3000);
 	if (pollRet == -1) {
 		if (errno == EINTR)
 			return ;
-		throw std::runtime_error(std::string("Error: poll failed.") + std::strerror(errno));
+		std::cerr << "[ERROR] poll failed: " << std::strerror(errno) << std::endl;
+		return ;
 	}
 	if (pollRet == 0)
 		return ;
@@ -317,8 +324,12 @@ bool	Server::handleClientEvent(size_t index) {
 	if (index == 0 || index >= _fds.size())
 		return false;
 	clientIndex = index - 1;
-	if (clientIndex >= _clients.size())
-		throw std::runtime_error("Error: client index out of range.");
+	
+	if (clientIndex >= _clients.size()) {
+		std::cerr << "[ERROR] client index out of range at index " << index << std::endl;
+		return false;
+	}
+	
 	fd = _fds[index].fd;
 	if (_fds[index].revents & (POLLHUP | POLLERR | POLLNVAL)) {
 		removeClient(index, "Connection closed");
@@ -341,9 +352,10 @@ bool	Server::handleClientEvent(size_t index) {
 	if (bytesRead == -1) {
 		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
 			return false;
-		throw std::runtime_error(std::string("Error: recv failed: ") + std::strerror(errno));
+		std::cerr << "[ERROR] recv failed on fd " << fd << ": " << std::strerror(errno) << std::endl;
+		removeClient(index, "recv error");
+		return true;
 	}
 	buffer[bytesRead] = '\0';
 	return (handleClientBuffer(clientIndex, std::string(buffer, bytesRead)));
-	//return false;
 }

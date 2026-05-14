@@ -102,6 +102,7 @@ private:
 	void	handlePing(size_t clientIndex, const parseMessage &msg);
 	void	handlePong(size_t clientIndex, const parseMessage &msg);
 	void	handleQuit(size_t clientIndex, const parseMessage &msg);
+	void	handlePart(size_t clientIndex, const parseMessage &msg);
 	
 	//Mode.cpp
 	void	handleChannelModeQuery(size_t clientIndex, const std::string &channelName);
