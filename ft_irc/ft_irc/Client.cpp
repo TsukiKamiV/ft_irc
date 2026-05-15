@@ -1,132 +1,137 @@
 #include "Client.hpp"
 
-Client::Client() :
-	_clientFd(-1),
-	_ip(""),
-	_nick(""),
-	_username(""),
-	_userHost(""),
-	_hostField(""),
-	_serverName(""),
-	_realName(""),
-	_prefix(""),
-	_buffer(""),
-	_sendBuffer(""),
-	_registered(false),
-	_passApprouved(false),
-	_shouldDisconnect(false)
+Client::Client()
+: _clientFd(-1),
+_ip(""),
+_nick(""),
+_username(""),
+_userHost(""),
+_hostField(""),
+_serverName(""),
+_realName(""),
+_buffer(""),
+_sendBuffer(""),
+_registered(false),
+_passApprouved(false),
+_shouldDisconnect(false)
 {}
 
-Client::Client(int fd, const std::string &ip):
-	_clientFd(fd),
-	_ip(ip),
-	_nick(""),
-	_username(""),
-	_userHost(""),
-	_hostField(""),
-	_serverName(""),
-	_realName(""),
-	_prefix(""),
-	_buffer(""),
-	_sendBuffer(""),
-	_registered(false),
-	_passApprouved(false),
-	_shouldDisconnect(false)
+Client::Client(int fd, const std::string &ip)
+: _clientFd(fd),
+_ip(ip),
+_nick(""),
+_username(""),
+_userHost(""),
+_hostField(""),
+_serverName(""),
+_realName(""),
+_buffer(""),
+_sendBuffer(""),
+_registered(false),
+_passApprouved(false),
+_shouldDisconnect(false)
 {}
 
 Client::~Client() {}
 
 int	Client::getFd() const {
-	return this->_clientFd;
+	return _clientFd;
 }
 
 void	Client::setFd(int fd) {
-	this->_clientFd = fd;
+	_clientFd = fd;
 }
 
 const std::string	&Client::getIP() const {
-	return this->_ip;
+	return _ip;
 }
 
 void	Client::setIP(const std::string &ip) {
-	this->_ip = ip;
+	_ip = ip;
 }
 
-const std::string &Client::getNick() const {
-	return this->_nick;
+const std::string	&Client::getNick() const {
+	return _nick;
 }
 
-void	Client::setNick(const std::string &nick) {
-	this->_nick = nick;
+void	Client::setNick(const std::string &n) {
+	_nick = n;
 }
 
-const std::string &Client::getUsername() const {
-	return this->_username;
-}
-
-void	Client::setUsername(const std::vector<std::string> &params) {
-	this->_username = params[0];
-	this->_userHost = params[1];
-	this->_serverName = params[2];
-	this->_realName = params[3];
-}
-
-const std::string	&Client::getHostField() const {
-	return this->_hostField;
-}
-
-void	Client::setHostField(const std::string &hostField) {
-	this->_hostField = hostField;
+const std::string	&Client::getUsername() const {
+	return _username;
 }
 
 const std::string	&Client::getUserHost() const {
-	return this->_userHost;
+	return _userHost;
 }
 
-const std::string 	&Client::getServerName() const {
-	return this->_serverName;
+const std::string	&Client::getServerName() const {
+	return _serverName;
 }
 
 const std::string	&Client::getRealName() const {
-	return this->_realName;
+	return _realName;
 }
 
-std::string Client::getPrefix() const {
-	std::string host;
-	host = getHostField();
-	if (host.empty())
-		host = getIP();
-	if (host.empty())
-		host = "unknown";
-	return (this->getNick() + "!" + this->getUsername() + "@" + host);
+void	Client::setUsername(const std::vector<std::string> &params) {
+	_username = params[0];
+	_userHost = params[1];
+	_serverName = params[2];
+	_realName = params[3];
 }
 
-const std::string &Client::getBuffer() const {
-	return this->_buffer;
+const std::string	&Client::getHostField() const {
+	return _hostField;
 }
 
-std::string &Client::getBuffer() {
-	return this->_buffer;
+void	Client::setHostField(const std::string &hostField) {
+	_hostField = hostField;
 }
 
-void	Client::setBuffer(const std::string &buffer) {
-	this->_buffer = buffer;
+std::string	Client::getPrefix() const {
+	std::string host = _hostField.empty() ? (_ip.empty() ? "unknown" : _ip) : _hostField;
+	return (_nick + "!" + _username + "@" + host);
 }
 
-const std::string &Client::getSendBuffer() const {
-	return this->_sendBuffer;
+const std::string	&Client::getBuffer() const {
+	return _buffer;
 }
 
-std::string &Client::getSendBuffer() {
-	return this->_sendBuffer;
+std::string	&Client::getBuffer() {
+	return _buffer;
 }
 
-void	Client::setSendBuffer(const std::string &sendBuffer) {
-	this->_sendBuffer = sendBuffer;
+void	Client::setBuffer(const std::string &b) {
+	_buffer = b;
+}
+
+const std::string	&Client::getSendBuffer() const {
+	return _sendBuffer;
+}
+
+std::string	&Client::getSendBuffer() {
+	return _sendBuffer;
+}
+
+void	Client::setSendBuffer(const std::string &s) {
+	_sendBuffer = s;
+}
+
+bool	Client::shouldDisconnect() const {
+	return _shouldDisconnect;
+}
+
+void	Client::setShouldDisconnect(bool value) {
+	_shouldDisconnect = value;
 }
 
 void	Client::appendBuffer(const std::string &chunk) {
 	_buffer += chunk;
+}
+
+void	Client::appendSendBuffer(const std::string &chunk) {
+	_sendBuffer += chunk;
 }
 
 void	Client::eraseBuffer(size_t len) {
@@ -134,10 +139,6 @@ void	Client::eraseBuffer(size_t len) {
 		_buffer.clear();
 	else
 		_buffer.erase(0, len);
-}
-
-void	Client::appendSendBuffer(const std::string &chunk) {
-	_sendBuffer += chunk;
 }
 
 void	Client::eraseSendBuffer(size_t len) {
@@ -152,7 +153,7 @@ bool	Client::isRegistered() const {
 }
 
 void	Client::setRegistered(bool value) {
-	this->_registered = value;
+	_registered = value;
 }
 
 bool	Client::isPassApprouved() const {
@@ -161,12 +162,4 @@ bool	Client::isPassApprouved() const {
 
 void	Client::setPassApprouved(bool value) {
 	_passApprouved = value;
-}
-
-bool	Client::shouldDisconnect() const {
-	return _shouldDisconnect;
-}
-
-void	Client::setShouldDisconnect(bool value) {
-	_shouldDisconnect = value;
 }

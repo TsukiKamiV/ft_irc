@@ -1,7 +1,6 @@
 #include "Server.hpp"
 #include "Client.hpp"
 #include "Channel.hpp"
-
 #include <cstdlib>
 #include <climits>
 #include <cerrno>
@@ -9,43 +8,32 @@
 #include <iostream>
 
 static bool	isAllDigits(const char *str) {
-	size_t i;
 	if (str == NULL || *str == '\0')
 		return false;
-	i = 0;
-	while (str[i] != '\0') {
+	for (size_t i = 0; str[i] != '\0'; ++i)
 		if (!std::isdigit(static_cast<unsigned char>(str[i])))
 			return false;
-		i++;
-	}
 	return true;
 }
 
 static bool	isValidPort(const char *portStr) {
-	char *end;
-	long port;
-	
 	if (!isAllDigits(portStr))
 		return false;
+	char	*end = NULL;
 	errno = 0;
-	end = NULL;
-	port = std::strtol(portStr, &end, 10);
+	const long	port = std::strtol(portStr, &end, 10);
 	if (errno == ERANGE || end == NULL || *end != '\0')
 		return false;
-	if (port < 1 || port > 65535)
-		return false;
-	return true;
+	return (port >= 1 && port <= 65535);
 }
 
 static bool	isValidPassword(const char *password) {
 	if (password == NULL || password[0] == '\0')
 		return false;
-	int i = 0;
-	while (password[i] != '\0') {
+	for (int i = 0; password[i] != '\0'; ++i) {
 		if (password[i] == ' ' || password[i] == '\t'
 			|| password[i] == '\r' || password[i] == '\n')
 			return false;
-		i++;
 	}
 	return true;
 }
@@ -66,15 +54,14 @@ static bool	checkParams(int argc, const char *argv[]) {
 	return true;
 }
 
-int main(int argc, const char * argv[]) {
-	if (checkParams(argc, argv) == false)
+int	main(int argc, const char *argv[]) {
+	if (!checkParams(argc, argv))
 		return EXIT_FAILURE;
 	try {
-		Server server(std::strtol(argv[1], NULL, 10), argv[2]);
+		Server	server(std::strtol(argv[1], NULL, 10), argv[2]);
 		server.initServer();
 		server.run();
-	}
-	catch (const std::exception &e) {
+	} catch (const std::exception &e) {
 		std::cerr << e.what() << std::endl;
 		return EXIT_FAILURE;
 	}

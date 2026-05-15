@@ -3,11 +3,7 @@
 
 #include <vector>
 #include <string>
-#include <limits>
 #include <climits>
-
-//#include "Client.hpp"
-//#include "Server.hpp"
 
 class Channel {
 public:
@@ -19,8 +15,7 @@ public:
 		OPERATOR_ALREADY_SET = 0,
 		OPERATOR_ADDED = 1,
 		OPERATOR_REMOVED = 2,
-		OPERATOR_NOT_FOUND = 3,
-		OPERATOR_LESS_THAN_ONE = 4
+		OPERATOR_NOT_FOUND = 3
 	};
 	
 	enum e_invite_result {
@@ -31,15 +26,15 @@ public:
 		INVITE_REMOVED = 2
 	};
 	
-	const 	std::string &getName() const;
-	void	setName(const std::string &name);
+	const std::string	&getName() const;
+	void				setName(const std::string &name);
 	
-	const 	std::string &getTopic() const;
-	void	setTopic(const std::string &topic);
+	const std::string	&getTopic() const;
+	void				setTopic(const std::string &topic);
 	
-	const	std::string &getKey() const;
-	void	setKey(const std::string &key);
-	void	removeKey();
+	const std::string	&getKey() const;
+	void				setKey(const std::string &key);
+	void				removeKey();
 	
 	bool	hasMember(int clientFd) const;
 	void	addMember(int clientFd);
@@ -72,23 +67,18 @@ public:
 	void	setMaxMemberNum(int number);
 	void	removeMaxMemberNum();
 	
-	
-	//const std::vector<int> &getOperator() const;
-	//void	setOperator(const int operatorFd);
-	
 private:
-	bool		_inviteOnly;
-	bool		_topicRestricted;
-	bool		_needKey;
-	bool		_numLimited;
-	std::string _name;
-	std::string _topic;
-	std::string _key;
-	int			_maxMemberNum;
+	bool			_inviteOnly;
+	bool			_topicRestricted;
+	bool			_needKey;
+	bool			_numLimited;
+	std::string		_name;
+	std::string		_topic;
+	std::string		_key;
+	int				_maxMemberNum;
 	std::vector<int> _memberFds;
 	std::vector<int> _operatorFds;
 	std::vector<int> _invitedFds;
-	
 };
 
 #endif
