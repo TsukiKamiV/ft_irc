@@ -104,7 +104,13 @@ echo "PASS pass"
 echo "NICK bbb"
 echo "USER bbb bbb localhost :bbb"
 echo "JOIN #1"
-while true; do echo "PRIVMSG #1 :hello hello hello hello hello"; done
+
+i=0
+while [ $i -lt 200 ]; do
+        echo "PRIVMSG #1 :flood message $i"
+        sleep 0.05
+        i=$((i + 1))
+done
 ) | nc 127.0.0.1 6667
 ```
 Then use `fg` for client A to continue the session.
